@@ -569,9 +569,10 @@ module ActiveRecord
         @statements = StatementPool.new @connection,
                                         self.class.type_cast_config_to_integer(config.fetch(:statement_limit) { 1000 })
 
-        if postgresql_version < 80200
-          raise "Your version of PostgreSQL (#{postgresql_version}) is too old, please upgrade!"
-        end
+        # RedShift PostgreSQL under version is 8.0.2 and making the app fail.
+        # if postgresql_version < 80200
+        #   raise "Your version of PostgreSQL (#{postgresql_version}) is too old, please upgrade!"
+        # end
 
         @type_map = OID::TypeMap.new
         initialize_type_map(type_map)
@@ -634,7 +635,8 @@ module ActiveRecord
         old, self.client_min_messages = client_min_messages, 'panic'
         execute('SET standard_conforming_strings = on', 'SCHEMA') rescue nil
       ensure
-        self.client_min_messages = old
+        # client_min_messages can not be set in RedShift
+        # self.client_min_messages = old
       end
 
       def supports_insert_with_returning?
@@ -907,7 +909,7 @@ module ActiveRecord
           if @config[:encoding]
             @connection.set_client_encoding(@config[:encoding])
           end
-          self.client_min_messages = @config[:min_messages] || 'warning'
+          self.client_min_messages = @config[:min_messages] if @config[:min_messages]
           self.schema_search_path = @config[:schema_search_path] || @config[:schema_order]
 
           # Use standard-conforming strings if available so we don't have to do the E'...' dance.
